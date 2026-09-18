@@ -1,5 +1,5 @@
 from django.urls import path
-from profiles.views import health, profile_create, profile_delete, profile_discover, profile_history, profile_detail, profile_page, landing
+from profiles.views import health, profile_create, profile_delete, profile_discover, profile_history, profile_detail, profile_page, profile_add_comment, landing
 
 urlpatterns = [
     path("", landing, name="landing"),
@@ -9,5 +9,7 @@ urlpatterns = [
     path("api/v1/profiles/history/", profile_history, name="profile-history"),
     path("api/v1/profiles/<int:profile_id>/", profile_detail, name="profile-detail"),
     path("api/v1/profiles/<int:profile_id>/delete/", profile_delete, name="profile-delete"),
+    path("api/v1/profiles/<int:profile_id>/comments/", profile_add_comment, name="profile-add-comment"),
     path("profile/<int:profile_id>/", profile_page, name="profile-page"),
 ]
+

@@ -4,14 +4,23 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import UniversityProfile
+from .models import UniversityProfile, Comment
 from .services import create_profile
 from .services import discover_profile, discover_socials, _social_url_matches_name
 
 
 def landing(request):
     recent = UniversityProfile.objects.all()[:8]
-    return render(request, "landing.html", {"recent": recent, "hero_image": "/static/nazarbayev-university.png"})
+    recent_comments = Comment.objects.select_related("profile").all()[:10]
+    return render(
+        request,
+        "landing.html",
+        {
+            "recent": recent,
+            "recent_comments": recent_comments,
+            "hero_image": "/static/nazarbayev-university.png",
+        },
+    )
 
 
 def profile_history(request):
@@ -41,7 +50,79 @@ def profile_page(request, profile_id):
         item.save(update_fields=["payload"])
     photos = item.payload.get("photos", {})
     total = sum(len(value) for value in photos.values())
-    return render(request, "profile.html", {"item": item, "recent": UniversityProfile.objects.all()[:20], "photo_total": total, "category_total": sum(bool(value) for value in photos.values())})
+    comments = item.comments.all()
+    return render(
+        request,
+        "profile.html",
+        {
+            "item": item,
+            "comments": comments,
+            "recent": UniversityProfile.objects.all()[:20],
+            "photo_total": total,
+            "category_total": sum(bool(value) for value in photos.values()),
+        },
+    )
+
+
+@csrf_exempt
+def profile_add_comment(request, profile_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "method_not_allowed"}, status=405)
+    try:
+        profile = UniversityProfile.objects.get(pk=profile_id)
+    except UniversityProfile.DoesNotExist:
+        return JsonResponse({"error": "profile_not_found"}, status=404)
+
+    author_name = ""
+    text = ""
+
+    if request.content_type == "application/json" or request.body:
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            if isinstance(data, dict):
+                author_name = data.get("author_name", "")
+                text = data.get("text", "")
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            pass
+
+    if not text and request.POST:
+        author_name = request.POST.get("author_name", "")
+        text = request.POST.get("text", "")
+
+    author_name = str(author_name).strip() if author_name else ""
+    text = str(text).strip() if text else ""
+
+    if not author_name:
+        author_name = "Аноним"
+
+    if not text:
+        return JsonResponse({"error": "Текст комментария не может быть пустым"}, status=400)
+
+    comment = Comment.objects.create(
+        profile=profile,
+        author_name=author_name,
+        text=text,
+    )
+
+    if "text/html" in request.headers.get("Accept", "") and not (
+        request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.headers.get("Accept", "").find("json") != -1
+    ):
+        return redirect("profile-page", profile_id=profile_id)
+
+    return JsonResponse(
+        {
+            "id": comment.pk,
+            "author_name": comment.author_name,
+            "text": comment.text,
+            "created_at": comment.created_at.strftime("%d.%m.%Y %H:%M"),
+            "created_at_iso": comment.created_at.isoformat(),
+            "profile_id": profile.pk,
+            "profile_name": profile.name,
+        },
+        status=201,
+        json_dumps_params={"ensure_ascii": False},
+    )
+
 
 
 def health(request):

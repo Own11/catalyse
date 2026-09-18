@@ -277,6 +277,132 @@
             margin-top: 18px
         }
 
+        .comments-section {
+            margin-top: 48px;
+            width: 100%;
+            max-width: 1500px;
+        }
+
+        .comments-section h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .comment-form-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .comment-form-card h3 {
+            margin: 0 0 16px;
+            font-size: 16px;
+            color: var(--ink);
+        }
+
+        .comment-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .comment-form input,
+        .comment-form textarea {
+            width: 100%;
+            border: 1px solid var(--line);
+            background: #fafbf9;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font: inherit;
+            color: var(--ink);
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .comment-form input:focus,
+        .comment-form textarea:focus {
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(49, 92, 67, 0.1);
+            background: #fff;
+        }
+
+        .comment-form textarea {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        .comment-form-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 4px;
+        }
+
+        .comment-status {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .comment-status.error {
+            color: #d32f2f;
+        }
+
+        .comment-status.success {
+            color: var(--green);
+        }
+
+        .comments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .comment-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 18px 22px;
+            animation: reveal .4s ease both;
+        }
+
+        .comment-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .comment-author {
+            font-weight: 700;
+            color: var(--green);
+            font-size: 15px;
+        }
+
+        .comment-date {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .comment-text {
+            color: var(--ink);
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .no-comments {
+            background: var(--card);
+            border: 1px dashed var(--line);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+
         @media(max-width:800px) {
             .side {
                 width: 220px
@@ -492,6 +618,38 @@
                 {% endfor %}
                 {% endfor %}
             </div>
+
+            <section class="comments-section">
+                <h2>Отзывы и комментарии</h2>
+
+                <div class="comment-form-card">
+                    <h3>Оставить отзыв (анонимно)</h3>
+                    <form id="commentForm" class="comment-form">
+                        <input type="text" id="commentAuthor" placeholder="Ваше имя (необязательно, по умолчанию: Аноним)" maxlength="100">
+                        <textarea id="commentText" placeholder="Напишите ваш отзыв или комментарий об университете..." required></textarea>
+                        <div class="comment-form-footer">
+                            <span id="commentStatus" class="comment-status"></span>
+                            <button type="submit" id="commentSubmit" class="btn green">Отправить комментарий</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="commentsList" class="comments-list">
+                    {% for comment in comments %}
+                    <article class="comment-card">
+                        <div class="comment-header">
+                            <span class="comment-author">{{ comment.author_name }}</span>
+                            <span class="comment-date">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+                        </div>
+                        <div class="comment-text">{{ comment.text }}</div>
+                    </article>
+                    {% empty %}
+                    <div id="noComments" class="no-comments">
+                        Пока нет ни одного отзыва. Будьте первыми, кто оставит комментарий!
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
         </main>
     </div>
 
@@ -521,7 +679,88 @@
             b.onmouseenter = () => b.style.opacity = "1";
             b.onmouseleave = () => b.style.opacity = "0";
         });
+
+        const commentForm = document.getElementById("commentForm");
+        if (commentForm) {
+            commentForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const authorInput = document.getElementById("commentAuthor");
+                const textInput = document.getElementById("commentText");
+                const statusEl = document.getElementById("commentStatus");
+                const submitBtn = document.getElementById("commentSubmit");
+                const noCommentsEl = document.getElementById("noComments");
+                const commentsList = document.getElementById("commentsList");
+
+                const text = textInput.value.trim();
+                const author_name = authorInput.value.trim();
+
+                if (!text) {
+                    statusEl.textContent = "Пожалуйста, введите текст комментария";
+                    statusEl.className = "comment-status error";
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                statusEl.textContent = "Отправка комментария...";
+                statusEl.className = "comment-status";
+
+                try {
+                    const res = await fetch("/api/v1/profiles/{{ item.id }}/comments/", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Accept": "application/json"
+                        },
+                        body: JSON.stringify({ author_name, text })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        throw new Error(data.error || "Ошибка при отправке комментария");
+                    }
+
+                    if (noCommentsEl) {
+                        noCommentsEl.remove();
+                    }
+
+                    const newCard = document.createElement("article");
+                    newCard.className = "comment-card";
+                    newCard.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">${escapeHtml(data.author_name)}</span>
+                            <span class="comment-date">${escapeHtml(data.created_at)}</span>
+                        </div>
+                        <div class="comment-text">${escapeHtml(data.text)}</div>
+                    `;
+                    commentsList.prepend(newCard);
+
+                    textInput.value = "";
+                    authorInput.value = "";
+                    statusEl.textContent = "Комментарий успешно добавлен!";
+                    statusEl.className = "comment-status success";
+                    setTimeout(() => {
+                        if (statusEl.textContent === "Комментарий успешно добавлен!") {
+                            statusEl.textContent = "";
+                        }
+                    }, 3000);
+                } catch (err) {
+                    statusEl.textContent = err.message;
+                    statusEl.className = "comment-status error";
+                } finally {
+                    submitBtn.disabled = false;
+                }
+            };
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
     </script>
+
 </body>
 
 </html>
