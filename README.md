@@ -16,20 +16,71 @@ Catalys — сервис для создания визуального проф
 - JSON API.
 - подготовленная фоновая обработка через Celery и Redis.
 
-## Запуск
+## Установка и запуск
 
-Требуется Python 3.11+.
+Требуется Python 3.11 или новее.
+
+### macOS и Linux
 
 ```bash
 cd catalys
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-python3 manage.py migrate
-python3 manage.py runserver
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
 ```
 
 Откройте <http://127.0.0.1:8000/>.
+
+### Windows PowerShell
+
+```powershell
+cd catalys
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+Если PowerShell запрещает активацию окружения, выполните один раз:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+Для Windows CMD активация выглядит так:
+
+```bat
+.venv\Scripts\activate.bat
+```
+
+Остановить сервер: `Ctrl+C`.
+
+## Gemini AI
+
+AI-описание профиля работает при наличии ключа Gemini. Переменные нужно задать в том же терминале, где запускается Django.
+
+### macOS и Linux
+
+```bash
+export GEMINI_API_KEY="your_key"
+export GEMINI_MODEL="gemini-3.5-flash-lite"
+python manage.py runserver
+```
+
+### Windows PowerShell
+
+```powershell
+$env:GEMINI_API_KEY="your_key"
+$env:GEMINI_MODEL="gemini-3.5-flash-lite"
+python manage.py runserver
+```
+
+Без ключа поиск работает, но используется резервное описание вместо AI-описания.
 
 ## Redis и Celery
 
@@ -55,7 +106,7 @@ celery -A celery.app worker --loglevel=info
 python3 manage.py seed_demo
 ```
 
-Затем откройте интерфейс и нажмите `History`. Это удобно для презентации, если внешний поиск временно недоступен.
+Затем откройте интерфейс и нажмите `History`.
 
 ## API
 
@@ -106,20 +157,9 @@ profiles/views.py           # web views и API
 profiles/models.py          # сохранение профилей
 profiles/management/        # команда seed_demo
 templates/landing.html      # интерфейс Catalys
-assets/nazarbayev-university.png # локальное hero-изображение для demo
+assets/                    # дополнительные локальные ресурсы (если добавлены)
 ```
 
-Vision-проверка изображений запланирована отдельным Gemini-адаптером после стабилизации основного MVP.
+Проверка изображений через Vision выполняется опционально при наличии соответствующего API-ключа.
 
-## Gemini AI
-
-Для включения AI-резюме профиля задайте ключ Gemini:
-
-```bash
-export GEMINI_API_KEY="your_key"
-export GEMINI_MODEL="gemini-3.5-flash-lite"
-```
-
-Без ключа используется локальный fallback, поэтому demo не ломается. AI-слой возвращает `summary`, `highlights`, `recommendation` и поле `mode` (`gemini` или `fallback`).
-
-Перед поиском Gemini также нормализует название университета и раскрывает аббревиатуры (`MIT`, `NYU`, `KAIST`, `MBZUAI`). При недоступности API используется локальный словарь aliases.
+AI-слой возвращает `summary`, `highlights`, `recommendation` и поле `mode` (`gemini` или `fallback`). Название университета обрабатывается по пользовательскому запросу; заранее заданных университетов и аббревиатур нет.

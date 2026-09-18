@@ -6,12 +6,16 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import UniversityProfile
 from .services import create_profile
-from .services import discover_profile, discover_socials, _social_url_matches_name
+from .services import discover_profile, _is_social_profile
+
+
+def concise_description(name: str) -> str:
+    return f"Визуальный профиль {name} на основе доступных открытых материалов."
 
 
 def landing(request):
     recent = UniversityProfile.objects.all()[:8]
-    return render(request, "landing.html", {"recent": recent, "hero_image": "/static/nazarbayev-university.png"})
+    return render(request, "landing.html", {"recent": recent})
 
 
 def profile_history(request):
@@ -34,12 +38,37 @@ def profile_page(request, profile_id):
         item = UniversityProfile.objects.get(pk=profile_id)
     except UniversityProfile.DoesNotExist:
         return render(request, "profile.html", {"error": "Профиль не найден"}, status=404)
-    # Backfill profiles created before social discovery was added.
+    # Remove obsolete timeout markers from profiles created before the search
+    # flow stopped using a global time limit.
+    if "sources_timeout" in item.payload.get("warnings", []):
+        item.payload["warnings"] = [w for w in item.payload["warnings"] if w != "sources_timeout"]
+    # Opening a profile must be read-only and fast. Discovery happens once in
+    # the API request; never repeat network searches during page rendering.
     socials = item.payload.get("socials") or {}
-    if not socials or any(not _social_url_matches_name(url, item.name) for url in socials.values()):
-        item.payload["socials"] = discover_socials(item.name)
+    socials = {
+        network: url for network, url in socials.items()
+        if network in {"instagram", "facebook", "youtube", "telegram", "whatsapp"}
+        and _is_social_profile(url, network)
+    }
+    item.payload["socials"] = socials
+    if item.payload.get("socials") != socials:
+        item.save(update_fields=["payload"])
+    insights = item.payload.get("ai_insights") or {}
+    if ("создан за ограниченное время" in str(insights.get("summary", ""))
+            or str(insights.get("summary", "")).startswith("Краткий визуальный профиль")):
+        insights["summary"] = concise_description(item.name)
+        item.payload["ai_insights"] = insights
         item.save(update_fields=["payload"])
     photos = item.payload.get("photos", {})
+    if not any(photos.values()):
+        refreshed = discover_profile(item.name)
+        if any(refreshed.get("photos", {}).values()):
+            item.payload.update(refreshed)
+            item.save(update_fields=["payload"])
+            photos = item.payload.get("photos", {})
+    if photos and not any(photos.values()) and "sources_unavailable" not in item.payload.get("warnings", []):
+        item.payload.setdefault("warnings", []).append("sources_unavailable")
+        item.save(update_fields=["payload"])
     total = sum(len(value) for value in photos.values())
     return render(request, "profile.html", {"item": item, "recent": UniversityProfile.objects.all()[:20], "photo_total": total, "category_total": sum(bool(value) for value in photos.values())})
 
@@ -88,6 +117,6 @@ def profile_discover(request):
         profile = discover_profile(name)
     except Exception:
         profile = create_profile({"name": name, "description": f"Visual profile discovered for {name}.", "images": []})
-        profile["ai_insights"] = {"summary": f"{name} profile is ready; external image sources are temporarily unavailable.", "highlights": [], "mode": "fallback"}
+        profile["ai_insights"] = {"summary": concise_description(name), "highlights": [], "mode": "fallback"}
     saved = UniversityProfile.objects.create(name=profile["name"], payload=profile)
     return JsonResponse({"id": saved.pk, "profile": profile}, json_dumps_params={"ensure_ascii": False})
