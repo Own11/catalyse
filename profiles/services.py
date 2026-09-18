@@ -92,27 +92,76 @@ def _is_social_profile(url: str, network: str) -> bool:
 
 
 def discover_socials(name: str) -> dict[str, str]:
-    """Find actual university social profiles and omit networks not found."""
+    """Find actual university social profiles using web search and Gemini."""
+    found = {}
     try:
         from duckduckgo_search import DDGS
 
-        found = {}
         with DDGS() as ddgs:
             for network, domains in SOCIAL_DOMAINS.items():
-                results = ddgs.text(f'"{name}" site:{domains[0]}', max_results=8)
-                for result in results:
-                    url = result.get("href") or result.get("url")
-                    if not url or not _is_social_profile(url, network):
-                        continue
-                    text = " ".join(str(result.get(key, "")) for key in ("title", "body")).lower()
-                    if not any(token in text or token in url.lower() for token in identity_tokens(name)):
-                        continue
-                    found[network] = url
-                    break
-        return found
+                queries = (f'"{name}" official site:{domains[0]}', f'"{name}" {network} site:{domains[0]}', f'{name} official {network} site:{domains[0]}')
+                for query in queries:
+                    for result in ddgs.text(query, max_results=8):
+                        url = result.get("href") or result.get("url")
+                        if not url or not _is_social_profile(url, network):
+                            continue
+                        text = " ".join(str(result.get(key, "")) for key in ("title", "body")).lower()
+                        if not any(token in text or token in url.lower() for token in identity_tokens(name)):
+                            continue
+                        found[network] = url
+                        break
+                    if network in found:
+                        break
     except Exception:
-        # Search is optional; never show fake search links when it is unavailable.
-        return {}
+        # Search is optional; Gemini can still provide the second source.
+        pass
+
+    # Let Gemini fill only networks that web search did not find.
+    key = os.getenv("GEMINI_API_KEY")
+    if key and len(found) < len(SOCIAL_DOMAINS):
+        prompt = (
+            f"Find the official social media profiles of the university {name}. "
+            "Return JSON only with keys instagram, facebook, youtube, telegram, whatsapp. "
+            "Use a direct official profile/channel URL or null when it cannot be identified. "
+            "Never return search URLs, guesses, or unrelated student/community accounts."
+        )
+        body = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"responseMimeType": "application/json", "temperature": 0},
+        }
+        try:
+            model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+            req = Request(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={quote(key)}",
+                data=json.dumps(body).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urlopen(req, timeout=10) as response:
+                data = json.loads(response.read())
+            raw = data["candidates"][0]["content"]["parts"][0]["text"]
+            suggestions = json.loads(raw)
+            for network in SOCIAL_DOMAINS:
+                url = suggestions.get(network)
+                if network not in found and isinstance(url, str) and _is_social_profile(url, network) and _social_url_matches_name(url, name) and _url_is_alive(url):
+                    found[network] = url
+        except (KeyError, TypeError, ValueError, OSError):
+            pass
+    return found
+
+
+def _url_is_alive(url: str) -> bool:
+    try:
+        response = httpx.get(url, follow_redirects=True, timeout=5, headers={"User-Agent": "CatalysMVP/1.0"})
+        return response.status_code < 400
+    except httpx.HTTPError:
+        return False
+
+
+def _social_url_matches_name(url: str, name: str) -> bool:
+    """Require the university identity to appear in an AI-suggested handle/URL."""
+    normalized_url = urlparse(url).path.lower().replace("-", "").replace("_", "")
+    return any(token.replace(" ", "") in normalized_url for token in identity_tokens(name))
 
 
 async def validate_urls(items: list[dict]) -> list[dict]:

@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import UniversityProfile
 from .services import create_profile
-from .services import discover_profile
+from .services import discover_profile, discover_socials, _social_url_matches_name
 
 
 def landing(request):
@@ -34,6 +34,11 @@ def profile_page(request, profile_id):
         item = UniversityProfile.objects.get(pk=profile_id)
     except UniversityProfile.DoesNotExist:
         return render(request, "profile.html", {"error": "Профиль не найден"}, status=404)
+    # Backfill profiles created before social discovery was added.
+    socials = item.payload.get("socials") or {}
+    if not socials or any(not _social_url_matches_name(url, item.name) for url in socials.values()):
+        item.payload["socials"] = discover_socials(item.name)
+        item.save(update_fields=["payload"])
     photos = item.payload.get("photos", {})
     total = sum(len(value) for value in photos.values())
     return render(request, "profile.html", {"item": item, "recent": UniversityProfile.objects.all()[:20], "photo_total": total, "category_total": sum(bool(value) for value in photos.values())})
