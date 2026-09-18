@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{{ item.name }} · Catalys</title>
+    <style>
+        :root {
+            --bg: #f4f5f0;
+            --side: #ffffff;
+            --card: #ffffff;
+            --ink: #152019;
+            --muted: #718078;
+            --line: #dfe6dc;
+            --green: #315c43
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font: 15px system-ui
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh
+        }
+
+        .side {
+            width: 280px;
+            background: var(--side);
+            border-right: 1px solid var(--line);
+            padding: 25px 18px;
+            flex: none;
+            position: relative
+        }
+
+        .brand {
+            font-weight: 900;
+            font-size: 24px;
+            margin: 0 15px 28px
+        }
+
+        .brand span {
+            color: var(--green)
+        }
+
+        .new {
+            display: block;
+            width: 100%;
+            border: 1px solid #464947;
+            background: #f4f5f0;
+            color: var(--ink);
+            border-radius: 13px;
+            padding: 13px;
+            margin-bottom: 30px;
+            text-align: center;
+            text-decoration: none
+        }
+
+        .day {
+            color: var(--muted);
+            font-size: 12px;
+            margin: 18px 0 8px
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 5px
+        }
+
+        .history-item a {
+            display: block;
+            flex: 1;
+            color: var(--ink);
+            text-decoration: none;
+            padding: 10px 12px;
+            border-radius: 9px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .history-item a:hover {
+            background: #eef5e7
+        }
+
+        .main {
+            max-width: 1500px;
+            width: auto;
+            min-width: 0;
+            flex: 1;
+            margin: 0 auto;
+            padding: 42px 46px
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center
+        }
+
+        .back {
+            color: var(--muted);
+            text-decoration: none
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px
+        }
+
+        .btn {
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--ink);
+            border-radius: 99px;
+            padding: 10px 15px;
+            text-decoration: none
+        }
+
+        .green {
+            background: #315c43;
+            border-color: #315c43;
+            color: #fff
+        }
+
+        .identity {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin: 28px 0 18px
+        }
+
+        .logo {
+            width: 84px;
+            height: 84px;
+            border-radius: 22px;
+            object-fit: cover;
+            background: #30342f
+        }
+
+        .identity h1 {
+            font-size: clamp(34px, 5vw, 64px);
+            letter-spacing: -3px;
+            margin: 0
+        }
+
+        .identity p {
+            color: var(--muted);
+            margin: 8px 0
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 20px 0
+        }
+
+        .stat,
+        .ai,
+        .socials,
+        .source {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 20px
+        }
+
+        .stat b {
+            display: block;
+            font-size: 30px;
+            color: var(--green)
+        }
+
+        .stat span,
+        .source {
+            color: var(--muted)
+        }
+
+        .ai {
+            margin: 20px 0;
+            width: 100%;
+            max-width: 1500px
+        }
+
+        .ai h2 {
+            margin: 0 0 12px;
+            font-size: 18px
+        }
+
+        .ai p {
+            color: var(--muted);
+            line-height: 1.55
+        }
+
+        .socials {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 20px 0;
+            width: 100%;
+            max-width: 1500px
+        }
+
+        .socials strong {
+            margin-right: auto
+        }
+
+        .social {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #eef5e7;
+            color: var(--green);
+            display: grid;
+            place-items: center;
+            text-decoration: none;
+            font-weight: 800
+        }
+
+        .social:hover {
+            background: var(--green);
+            color: #fff
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            margin: 14px 0 40px;
+            align-items: start;
+            width: 100%;
+            max-width: 1500px
+        }
+
+        .gallery a {
+            min-width: 0
+        }
+
+        .gallery img {
+            width: 100%;
+            max-width: 100%;
+            aspect-ratio: 1.2;
+            object-fit: cover;
+            border-radius: 12px;
+            display: block
+        }
+
+        .source {
+            margin-top: 18px
+        }
+
+        @media(max-width:800px) {
+            .side {
+                width: 220px
+            }
+
+            .main {
+                padding: 30px 20px
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr)
+            }
+
+            .gallery {
+                grid-template-columns: repeat(2, 1fr)
+            }
+        }
+
+        @media(max-width:560px) {
+            .side {
+                display: none
+            }
+
+            .identity {
+                margin-top: 50px
+            }
+
+            .gallery {
+                grid-template-columns: 1fr
+            }
+        }
+
+        @keyframes rise {
+            from {
+                opacity: 0;
+                transform: translateY(18px)
+            }
+
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        @keyframes fade {
+            from {
+                opacity: 0
+            }
+
+            to {
+                opacity: 1
+            }
+        }
+
+        .main {
+            animation: fade .55s ease both
+        }
+
+        .identity,
+        .cover {
+            animation: rise .6s ease both
+        }
+
+        .stat {
+            animation: rise .5s ease both
+        }
+
+        .stat:nth-child(2) {
+            animation-delay: .08s
+        }
+
+        .stat:nth-child(3) {
+            animation-delay: .16s
+        }
+
+        .stat:nth-child(4) {
+            animation-delay: .24s
+        }
+
+        .ai,
+        .socials {
+            animation: rise .55s .18s ease both
+        }
+
+        .gallery a {
+            display: block;
+            animation: rise .45s ease both
+        }
+
+        .gallery img {
+            transition: transform .35s ease, filter .35s ease
+        }
+
+        .gallery a:hover img {
+            transform: scale(1.035);
+            filter: saturate(1.15)
+        }
+
+        .btn {
+            transition: transform .2s ease, box-shadow .2s ease
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px #18351c22
+        }
+
+        .history-item {
+            transition: background .2s ease, transform .2s ease
+        }
+
+        .history-item:hover {
+            transform: translateX(4px)
+        }
+
+        .cover img {
+            transition: transform .8s ease
+        }
+
+        .cover:hover img {
+            transform: scale(1.04)
+        }
+
+        @media(prefers-reduced-motion:reduce) {
+
+            *,
+            *:before,
+            *:after {
+                animation: none !important;
+                transition: none !important
+            }
+        }
+     reveal{from{opacity:0;transform:translateY(28px) scale(.98)}to{opacity:1;transform:none}} float{0%,100%{transform:rotate(-4deg) translateY(0)}50%{transform:rotate(-4deg) translateY(-10px)}} pulse{0%,100%{box-shadow:0 0 0 0 #b9ee6800}50%{box-shadow:0 0 0 10px #b9ee681c}}.main{animation:reveal .7s cubic-bezier(.2,.8,.2,1)}.identity{animation:reveal .65s .08s both}.identity .logo{animation:pulse 2.6s 1s infinite}.stat{animation:reveal .6s both;transition:transform .3s,box-shadow .3s}.stat:nth-child(1){animation-delay:.12s}.stat:nth-child(2){animation-delay:.2s}.stat:nth-child(3){animation-delay:.28s}.stat:nth-child(4){animation-delay:.36s}.stat:hover{transform:translateY(-7px);box-shadow:0 18px 35px #18351c18}.ai{animation:reveal .65s .42s both;transition:transform .3s,box-shadow .3s}.ai:hover{transform:translateY(-4px);box-shadow:0 18px 35px #18351c18}.socials{animation:reveal .65s .5s both}.social{transition:transform .25s,background .25s}.social:hover{transform:translateY(-5px) rotate(8deg);box-shadow:0 8px 18px #315c4333}.gallery a{animation:reveal .55s both}.gallery a:nth-child(2){animation-delay:.08s}.gallery a:nth-child(3){animation-delay:.16s}.gallery a:nth-child(4){animation-delay:.24s}.gallery img{transition:transform .45s cubic-bezier(.2,.8,.2,1),filter .45s}.gallery a:hover img{transform:scale(1.06) rotate(1deg);filter:saturate(1.2) contrast(1.04)}.btn{transition:transform .22s,box-shadow .22s,background .22s}.btn:hover{transform:translateY(-3px);box-shadow:0 10px 22px #18351c25}.side{transition:width .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s}.history-item{transition:transform .25s,background .25s}.history-item:hover{transform:translateX(6px)}(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}</style>
+</head>
+
+<body>
+    <div class="layout">
+        <aside class="side">
+            <div class="brand">catalys<span>●</span></div>
+            <a class="new" href="/">＋ Новый поиск</a>
+            <div class="history">
+                <div class="day">ИСТОРИЯ ЗАПРОСОВ</div>
+                {% for profile in recent %}
+                <span class="history-item">
+                    <a href="/profile/{{ profile.id }}/">{{ profile.name }}</a>
+                    <button class="delete" data-id="{{ profile.id }}" title="Удалить">×</button>
+                </span>
+                {% empty %}
+                <div class="day">История пуста</div>
+                {% endfor %}
+            </div>
+            <button id="sidebarToggle"
+                style="position:absolute;right:-14px;top:28px;border:1px solid var(--line);border-radius:50%;background:var(--side);cursor:pointer;font-size:20px"
+                aria-label="Toggle sidebar">‹</button>
+        </aside>
+
+        <main class="main">
+            <div class="top">
+                <a class="back" href="/">← На главную</a>
+                <div class="actions">
+                    <a class="btn" href="/api/v1/profiles/{{ item.id }}/">Export JSON</a>
+                    <a class="btn green" href="javascript:navigator.clipboard.writeText(location.href)">Share</a>
+                </div>
+            </div>
+
+            <section class="identity">
+                {% if item.payload.logo_url %}<img class="logo" src="{{ item.payload.logo_url }}" alt="logo">{% endif %}
+                <div>
+                    <h1>{{ item.name }}</h1>
+                    <p>Visual profile · verified sources</p>
+                </div>
+            </section>
+
+            <div class="stats">
+                <div class="stat"><b>{{ photo_total }}</b><span>verified images</span></div>
+                <div class="stat"><b>{{ category_total }}</b><span>visual assets</span></div>
+                <div class="stat"><b>3</b><span>source networks</span></div>
+                <div class="stat"><b>AI</b><span>profile analysis</span></div>
+            </div>
+
+            <section class="ai">
+                <h2>AI profile read</h2>
+                <p>{{ item.payload.ai_insights.summary|default:item.payload.campus_description }}</p>
+            </section>
+
+            <section class="socials">
+                <strong>University social channels</strong>
+                {% for key,url in item.payload.socials.items %}
+                <a class="social social-{{ key }}" href="{{ url }}" target="_blank" rel="noopener noreferrer" title="{{ key|title }}" aria-label="{{ key|title }}">{{ key|first|upper }}</a>
+                {% endfor %}
+            </section>
+
+            <h2>Visual map</h2>
+            <div class="gallery">
+                {% for category,images in item.payload.photos.items %}
+                {% for image in images|slice:":4" %}
+                <a href="{{ image.source_url }}" target="_blank">
+                    <img src="{{ image.image_url }}" loading="lazy" alt="{{ category }}"
+                        onerror="this.closest('a').remove()">
+                </a>
+                {% endfor %}
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const s = document.querySelector(".side"), t = document.getElementById("sidebarToggle");
+        t.onclick = () => {
+            const collapsed = s.style.width === "70px";
+            s.style.width = collapsed ? "280px" : "70px";
+            s.style.overflow = collapsed ? "visible" : "hidden";
+            t.style.right = collapsed ? "-14px" : "21px";
+            s.querySelectorAll(":scope > :not(#sidebarToggle)").forEach(item => {
+                item.style.visibility = collapsed ? "visible" : "hidden";
+            });
+            t.textContent = collapsed ? "‹" : "›";
+        };
+
+        document.querySelectorAll(".delete").forEach(b => {
+            b.onclick = async e => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (confirm("Удалить профиль?")) {
+                    const r = await fetch("/api/v1/profiles/" + b.dataset.id + "/delete/", { method: "POST" });
+                    if (r.ok) b.closest(".history-item").remove();
+                }
+            };
+            b.style.opacity = "0";
+            b.onmouseenter = () => b.style.opacity = "1";
+            b.onmouseleave = () => b.style.opacity = "0";
+        });
+    </script>
+</body>
+
+</html>

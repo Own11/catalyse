@@ -1,0 +1,6 @@
+Django>=5.2,<6
+duckduckgo-search>=6.3
+httpx>=0.27
+beautifulsoup4>=4.12
+celery>=5.4
+redis>=5.0
