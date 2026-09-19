@@ -34,6 +34,30 @@ python manage.py runserver
 
 Откройте <http://127.0.0.1:8000/>.
 
+## Деплой на Vercel + Neon
+
+1. Создайте проект в Neon и скопируйте pooled connection string в переменную `DATABASE_URL`.
+2. Импортируйте репозиторий в Vercel. Файл `vercel.json` уже направляет запросы в Django WSGI-приложение.
+3. Добавьте переменные окружения Vercel:
+
+```text
+DATABASE_URL=postgresql://...neon.tech/neondb?sslmode=require
+DJANGO_SECRET_KEY=случайная-длинная-строка
+DJANGO_DEBUG=0
+DJANGO_ALLOWED_HOSTS=.vercel.app
+CSRF_TRUSTED_ORIGINS=https://ваш-проект.vercel.app
+```
+
+Опционально добавьте `GEMINI_API_KEY`, `OPENAI_API_KEY` и соответствующие настройки моделей.
+
+После первого деплоя выполните миграции из локального терминала с тем же `DATABASE_URL`:
+
+```bash
+DATABASE_URL="ваша строка Neon" python3 manage.py migrate
+```
+
+В Vercel функция работает в serverless-режиме, поэтому SQLite и локальные файлы нельзя использовать как постоянное хранилище. Профили сохраняются в Neon, а изображения остаются внешними ссылками на источники.
+
 ### Windows PowerShell
 
 ```powershell
