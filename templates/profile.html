@@ -479,8 +479,14 @@
                 <p>{{ item.payload.ai_insights.summary|default:item.payload.campus_description }}</p>
             </section>
 
-            {% if item.payload.warnings and 'sources_timeout' not in item.payload.warnings %}
-            <div class="notice">{% if 'sources_unavailable' in item.payload.warnings or 'sources_timeout' in item.payload.warnings %}Сбор профиля ограничен примерно 40 секундами: часть внешних источников не успела ответить. Можно повторить поиск позже.{% else %}Недостаточно данных для полной проверки. Неподтверждённые материалы не выдаются как достоверные.{% endif %}</div>
+            {% if item.payload.warnings %}
+            <div class="notice">
+                {% if 'name_not_found' in item.payload.warnings %}По этому названию ничего надёжно не найдено. Проверьте написание или укажите официальное название университета.{% endif %}
+                {% if 'sources_unavailable' in item.payload.warnings or 'sources_timeout' in item.payload.warnings %}Часть внешних источников сейчас недоступна или не ответила вовремя. Попробуйте повторить поиск позже.{% endif %}
+                {% if 'insufficient_data' in item.payload.warnings %}Недостаточно подтверждённых данных для полного профиля; неподтверждённые материалы не показываются как достоверные.{% endif %}
+                {% if 'reviews_unavailable' in item.payload.warnings %}Отзывы из открытых источников не найдены.{% endif %}
+                {% if 'socials_unavailable' in item.payload.warnings %}Официальные социальные страницы не удалось подтвердить.{% endif %}
+            </div>
             {% endif %}
 
             {% if item.payload.socials %}<section class="socials">

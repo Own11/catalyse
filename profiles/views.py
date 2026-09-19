@@ -88,6 +88,11 @@ def profile_create(request):
     if not isinstance(data, dict):
         return JsonResponse({"error": "JSON body must be an object"}, status=400)
     profile = create_profile(data)
+    profile.setdefault("warnings", [])
+    if not profile.get("name"):
+        profile["warnings"].append("name_missing")
+    if not any(profile.get("photos", {}).values()):
+        profile["warnings"].append("insufficient_data")
     saved = UniversityProfile.objects.create(name=profile["name"], payload=profile)
     return JsonResponse({"id": saved.pk, "profile": profile}, status=201, json_dumps_params={"ensure_ascii": False})
 
@@ -118,5 +123,6 @@ def profile_discover(request):
     except Exception:
         profile = create_profile({"name": name, "description": f"Visual profile discovered for {name}.", "images": []})
         profile["ai_insights"] = {"summary": concise_description(name), "highlights": [], "mode": "fallback"}
+        profile.setdefault("warnings", []).extend(["sources_unavailable", "insufficient_data"])
     saved = UniversityProfile.objects.create(name=profile["name"], payload=profile)
     return JsonResponse({"id": saved.pk, "profile": profile}, json_dumps_params={"ensure_ascii": False})

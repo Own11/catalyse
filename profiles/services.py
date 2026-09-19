@@ -339,6 +339,8 @@ def create_profile(raw_data: dict) -> dict:
 def discover_profile(name: str) -> dict:
     """Fast keyless MVP discovery via Wikimedia's public image API."""
     resolved_name = gemini_alias(name)
+    suspicious_terms = ("кот", "котов", "кошка", "кошек", "cat", "cats", "flying", "летающ")
+    fictional_name = any(term in name.lower() for term in suspicious_terms)
     # Keep both the user-entered acronym and the normalized official name.
     # Wikimedia commonly uses filenames such as "MIT Building" rather than
     # the full "Massachusetts Institute of Technology" name.
@@ -347,6 +349,17 @@ def discover_profile(name: str) -> dict:
     if raw_name and len(raw_name.split()) == 1 and len(raw_name) <= 8:
         search_tokens.add(raw_name)
     query = quote(resolved_name)
+    identity_parts = [token for token in search_tokens if token.isalpha() and len(token) >= 3]
+    context_words = ("university", "institute", "college", "campus", "университет", "институт", "колледж", "кампус")
+
+    def relevant_image(item):
+        title = str(item.get("title", "")).lower()
+        matched = sum(token in title for token in identity_parts)
+        has_context = any(word in title for word in context_words)
+        # A multi-word university name needs both identity and university context.
+        # This prevents generic images returned for a typo or fictional name.
+        required = 1 if len(identity_parts) <= 1 else 2
+        return matched >= required and has_context
     endpoint = f"https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch={query}&gsrnamespace=6&gsrlimit=50&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=1200&format=json"
     def commons_images():
         found = []
@@ -365,6 +378,7 @@ def discover_profile(name: str) -> dict:
             pass
         return found
 
+    source_warnings = []
     with ThreadPoolExecutor(max_workers=2) as search_pool:
         image_future = search_pool.submit(duckduckgo_images, name)
         commons_future = search_pool.submit(commons_images)
@@ -372,12 +386,16 @@ def discover_profile(name: str) -> dict:
             images = image_future.result(timeout=9)
         except Exception:
             images = []
+            source_warnings.append("sources_unavailable")
         try:
             images.extend(commons_future.result(timeout=1))
         except Exception:
-            pass
+            source_warnings.append("sources_timeout")
     if images:
+        images = [item for item in images if relevant_image(item)]
         images = asyncio.run(validate_urls(images[:60]))
+    if fictional_name:
+        images = []
     if os.getenv("GEMINI_API_KEY") and images:
         images = [item for item in images[:24] if gemini_verify_image(name, item)]
     # Wikipedia is a second independent source and often has the official hero image.
@@ -393,7 +411,7 @@ def discover_profile(name: str) -> dict:
                 if thumb and (context or exact_identity) and any(token in page_title for token in name_tokens):
                     images.append({"image_url": thumb, "source_url": page.get("fullurl", "https://wikipedia.org"), "title": page.get("title", "") + " university campus", "university_match": True})
     except Exception:
-        pass
+        source_warnings.append("sources_unavailable")
     if os.getenv("OPENAI_API_KEY"):
         checked = []
         for item in images[:12]:
@@ -410,4 +428,16 @@ def discover_profile(name: str) -> dict:
     profile["socials"] = discover_socials(resolved_name)
     profile["reviews"] = discover_reviews(resolved_name)
     profile["ai_insights"] = gemini_insights(profile)
+    warnings = profile.setdefault("warnings", [])
+    if not profile["name"] or not profile["photos"]:
+        warnings.append("name_not_found")
+    if not any(profile["photos"].values()):
+        warnings.append("insufficient_data")
+    if not profile["reviews"]:
+        warnings.append("reviews_unavailable")
+    if not profile["socials"]:
+        warnings.append("socials_unavailable")
+    for warning in source_warnings:
+        if warning not in warnings:
+            warnings.append(warning)
     return profile
